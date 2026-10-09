@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spending Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Spending Tracker</h1>
+
+  <form id="expense-form">
+    <div class="field">
+      <label for="amount">Amount (€)</label>
+      <input type="number" id="amount" step="0.01" min="0" required>
+    </div>
+
+    <div class="field">
+      <label for="category">Category</label>
+      <select id="category" required>
+        <option value="Groceries">Groceries</option>
+        <option value="Joints">Joints</option>
+        <option value="Drinks">Drinks</option>
+        <option value="Going out">Going out</option>
+        <option value="Online shopping">Online shopping</option>
+        <option value="Eating out">Eating out</option>
+        <option value="Transport">Transport</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="card">Card</label>
+      <select id="card" required>
+        <option value="Revolut">Revolut</option>
+        <option value="VeloBank">VeloBank</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="date">Date</label>
+      <input type="date" id="date" required>
+    </div>
+
+    <div class="field">
+      <label for="note">Note (optional)</label>
+      <input type="text" id="note" placeholder="e.g. birthday dinner">
+    </div>
+
+    <button type="submit">Add expense</button>
+  </form>
+
+  <h2>Expenses</h2>
+  <ul id="expense-list"></ul>
+
+  <script src="script.js"></script>
+</body>
+</html>
