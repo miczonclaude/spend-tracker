@@ -21,4 +21,5 @@ A personal spending tracker. Plain HTML, CSS, and JavaScript — no frameworks, 
 
 - `index.html` — page structure (form + expense list container)
 - `style.css` — styling
+- `waves.svg` — page background (slowly moving wavy lines)
 - `script.js` — all logic: localStorage read/write, render, add, delete

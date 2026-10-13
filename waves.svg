@@ -1,0 +1,65 @@
+<!-- Page background: glowing fire-red wavy lines that slowly move. The black itself comes from style.css.
+     Each wave is drawn twice: once thick and blurred (the glow), once thin and sharp (the line).
+     To make the waves more or less visible, change the stroke-opacity numbers (0 = invisible, 1 = solid).
+     To make a wave faster or slower, change its dur (seconds for one full back-and-forth). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- Line colours (fire): deep red -> hot orange-red -> deep red, from left to right.
+         To recolour the waves, change these three stop-color values. -->
+    <linearGradient id="line-colour" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1440" y2="0">
+      <stop offset="0" stop-color="#e60000"/>
+      <stop offset="0.45" stop-color="#ff3b1f"/>
+      <stop offset="1" stop-color="#ff1400"/>
+    </linearGradient>
+
+    <!-- Blur used to turn a thick line into a soft glow. -->
+    <filter id="glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+
+    <!-- The wave shapes. They are only defined here; the two <use> lines below draw them.
+         Each one has a different rhythm and they cross each other on purpose, so it looks less tidy.
+
+         Movement: each <animate> slowly bends its wave from shape 1 to shape 2 and back, forever.
+         "values" holds the shapes (shape 1; shape 2; shape 1). Where shape 1 has a hill, shape 2 has a dip.
+         keySplines makes the motion ease in and out instead of moving at a constant speed. -->
+    <g id="waves" fill="none" stroke-linecap="round">
+      <path d="M-60,90 C120,10 260,260 430,140 S640,-20 800,120 S1090,330 1500,60" stroke-opacity="0.42">
+        <animate attributeName="d" dur="22s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+                 values="M-60,90 C120,10 260,260 430,140 S640,-20 800,120 S1090,330 1500,60;
+                         M-60,130 C120,200 260,60 430,170 S640,230 800,90 S1090,-10 1500,150;
+                         M-60,90 C120,10 260,260 430,140 S640,-20 800,120 S1090,330 1500,60"/>
+      </path>
+
+      <path d="M-60,380 C260,200 420,700 700,420 S1000,80 1200,360 S1400,620 1500,520" stroke-opacity="0.48">
+        <animate attributeName="d" dur="30s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+                 values="M-60,380 C260,200 420,700 700,420 S1000,80 1200,360 S1400,620 1500,520;
+                         M-60,440 C260,620 420,260 700,380 S1000,560 1200,300 S1400,240 1500,430;
+                         M-60,380 C260,200 420,700 700,420 S1000,80 1200,360 S1400,620 1500,520"/>
+      </path>
+
+      <path d="M-60,30 C300,180 500,480 760,700 S1200,900 1500,780" stroke-opacity="0.34">
+        <animate attributeName="d" dur="26s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+                 values="M-60,30 C300,180 500,480 760,700 S1200,900 1500,780;
+                         M-60,80 C300,60 500,620 760,640 S1200,760 1500,840;
+                         M-60,30 C300,180 500,480 760,700 S1200,900 1500,780"/>
+      </path>
+
+      <path d="M-60,640 C200,560 340,820 600,650 S820,420 1040,640 S1330,860 1500,700" stroke-opacity="0.44">
+        <animate attributeName="d" dur="34s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+                 values="M-60,640 C200,560 340,820 600,650 S820,420 1040,640 S1330,860 1500,700;
+                         M-60,690 C200,800 340,600 600,700 S820,860 1040,600 S1330,540 1500,760;
+                         M-60,640 C200,560 340,820 600,650 S820,420 1040,640 S1330,860 1500,700"/>
+      </path>
+    </g>
+  </defs>
+
+  <!-- Glow layer: thick and blurred. -->
+  <use href="#waves" stroke="url(#line-colour)" stroke-width="7" filter="url(#glow)"/>
+  <!-- Sharp layer: thin and crisp, drawn on top of the glow. -->
+  <use href="#waves" stroke="url(#line-colour)" stroke-width="1.4"/>
+</svg>
