@@ -4,69 +4,85 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spending Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Spending Tracker</h1>
+  <main class="dashboard">
+    <header class="page-header">
+      <h1>Spending Tracker</h1>
+      <div class="currency-switch" role="group" aria-label="Currency shown">
+        <button type="button" class="currency-btn" data-currency="EUR">€ Euro</button>
+        <button type="button" class="currency-btn" data-currency="PLN">zł Złoty</button>
+      </div>
+    </header>
 
-  <section id="totals">
-    <div class="total-box">
-      <span class="total-label">Today</span>
-      <span class="total-value" id="total-today"></span>
-    </div>
-    <div class="total-box">
-      <span class="total-label">This week</span>
-      <span class="total-value" id="total-week"></span>
-    </div>
-    <div class="total-box">
-      <span class="total-label">This month</span>
-      <span class="total-value" id="total-month"></span>
-    </div>
-  </section>
+    <section id="totals">
+      <div class="card total-box">
+        <span class="total-label">Today</span>
+        <span class="total-value" id="total-today"></span>
+      </div>
+      <div class="card total-box">
+        <span class="total-label">This week</span>
+        <span class="total-value" id="total-week"></span>
+      </div>
+      <div class="card total-box">
+        <span class="total-label">This month</span>
+        <span class="total-value" id="total-month"></span>
+      </div>
+    </section>
 
-  <form id="expense-form">
-    <div class="field">
-      <label for="amount">Amount (€)</label>
-      <input type="number" id="amount" step="0.01" min="0" required>
-    </div>
+    <section id="averages">
+      <div class="card total-box">
+        <span class="total-label">Average per day</span>
+        <span class="total-value" id="average-day"></span>
+      </div>
+      <div class="card total-box">
+        <span class="total-label">Average per week</span>
+        <span class="total-value" id="average-week"></span>
+      </div>
+      <div class="card total-box">
+        <span class="total-label">Average per month</span>
+        <span class="total-value" id="average-month"></span>
+      </div>
+    </section>
 
-    <div class="field">
-      <label for="category">Category</label>
-      <select id="category" required>
-        <option value="Groceries">Groceries</option>
-        <option value="Joints">Joints</option>
-        <option value="Drinks">Drinks</option>
-        <option value="Going out">Going out</option>
-        <option value="Online shopping">Online shopping</option>
-        <option value="Eating out">Eating out</option>
-        <option value="Transport">Transport</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
+    <section class="card breakdown-card">
+      <div class="card-header">
+        <h2>Spending by category</h2>
+        <div class="card-controls">
+          <select id="breakdown-period" aria-label="Period">
+            <option value="this-month">This month</option>
+            <option value="last-month">Last month</option>
+            <option value="all">All time</option>
+          </select>
+        </div>
+      </div>
+      <ul id="breakdown-list"></ul>
+    </section>
 
-    <div class="field">
-      <label for="card">Card</label>
-      <select id="card" required>
-        <option value="Revolut">Revolut</option>
-        <option value="VeloBank">VeloBank</option>
-      </select>
-    </div>
+    <section class="card import-card">
+      <h2>Import from Revolut</h2>
+      <p class="hint">Pick the CSV statement you exported from Revolut. Nothing is saved until you press Import.</p>
+      <input type="file" id="csv-file" accept=".csv" aria-label="Revolut CSV file">
+      <p id="import-message"></p>
 
-    <div class="field">
-      <label for="date">Date</label>
-      <input type="date" id="date" required>
-    </div>
+      <div id="import-preview" hidden>
+        <ul id="preview-list"></ul>
+        <div class="import-actions">
+          <button type="button" id="import-confirm">Import</button>
+          <button type="button" id="import-cancel" class="secondary-btn">Cancel</button>
+        </div>
+      </div>
+    </section>
 
-    <div class="field">
-      <label for="note">Note (optional)</label>
-      <input type="text" id="note" placeholder="e.g. birthday dinner">
-    </div>
-
-    <button type="submit">Add expense</button>
-  </form>
-
-  <h2>Expenses</h2>
-  <ul id="expense-list"></ul>
+    <section class="card list-card">
+      <h2>Recent expenses</h2>
+      <ul id="expense-list"></ul>
+    </section>
+  </main>
 
   <script src="script.js"></script>
 </body>

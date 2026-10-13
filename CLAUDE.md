@@ -10,15 +10,18 @@ A personal spending tracker. Plain HTML, CSS, and JavaScript — no frameworks, 
 
 ## Planned features (build in this order)
 
-1. ~~Add an expense (amount, category, card, date, optional note)~~ — done
+1. ~~Add an expense (amount, category, card, date, optional note)~~ — done, then removed: expenses now come only from the CSV import
 2. ~~List of expenses, with delete~~ — done
 3. Totals per day / week / month
-4. Breakdown by category and by card
+4. Breakdown by category — done (the Spending by category card); breakdown by card — not built yet
 5. Bar chart of spending per day
-6. CSV import from Revolut
+6. ~~CSV import from Revolut~~ — done (EUR and PLN card payments, with preview and duplicate check)
+7. ~~Average spending per day / week / month~~ — done
+8. ~~Automatic categories from the store name (keyword rules + remembered corrections)~~ — done
 
 ## Current files
 
-- `index.html` — page structure (form + expense list container)
+- `index.html` — page structure (totals, averages, spending by category, Revolut import card, expense list)
 - `style.css` — styling
-- `script.js` — all logic: localStorage read/write, render, add, delete
+- `waves.svg` — page background (slowly moving wavy lines)
+- `script.js` — all logic: localStorage read/write, render, totals, averages, CSV import, delete
