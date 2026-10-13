@@ -48,10 +48,68 @@ function renderExpenses() {
   }
 }
 
+// Turns a Date into text like "2026-10-13", the same format the expenses are stored in.
+function formatDateAsText(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Returns the Monday of the week that contains the given date.
+function getStartOfWeek(today) {
+  // getDay() gives Sunday = 0, Monday = 1, ... Saturday = 6.
+  // Shifting by 6 makes Monday = 0 and Sunday = 6.
+  const daysSinceMonday = (today.getDay() + 6) % 7;
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysSinceMonday);
+}
+
+// Adds up the expenses dated from startText to endText (both included).
+// Dates are compared as text, which works because "YYYY-MM-DD" sorts in calendar order.
+function sumExpensesBetween(expenses, startText, endText) {
+  let total = 0;
+
+  for (const expense of expenses) {
+    if (expense.date >= startText && expense.date <= endText) {
+      total += expense.amount;
+    }
+  }
+
+  return total;
+}
+
+function renderTotals() {
+  const expenses = loadExpenses();
+  const today = new Date();
+
+  const todayText = formatDateAsText(today);
+
+  const weekStart = getStartOfWeek(today);
+  const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+
+  // Day 0 of next month is the last day of this month.
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+  const todayTotal = sumExpensesBetween(expenses, todayText, todayText);
+  const weekTotal = sumExpensesBetween(expenses, formatDateAsText(weekStart), formatDateAsText(weekEnd));
+  const monthTotal = sumExpensesBetween(expenses, formatDateAsText(monthStart), formatDateAsText(monthEnd));
+
+  document.getElementById("total-today").textContent = `€${todayTotal.toFixed(2)}`;
+  document.getElementById("total-week").textContent = `€${weekTotal.toFixed(2)}`;
+  document.getElementById("total-month").textContent = `€${monthTotal.toFixed(2)}`;
+}
+
+// Redraws everything that depends on the saved expenses.
+function renderPage() {
+  renderExpenses();
+  renderTotals();
+}
+
 function deleteExpense(id) {
   const expenses = loadExpenses().filter((expense) => expense.id !== id);
   saveExpenses(expenses);
-  renderExpenses();
+  renderPage();
 }
 
 document.getElementById("expense-form").addEventListener("submit", (event) => {
@@ -72,7 +130,7 @@ document.getElementById("expense-form").addEventListener("submit", (event) => {
 
   event.target.reset();
   document.getElementById("date").valueAsDate = new Date();
-  renderExpenses();
+  renderPage();
 });
 
-renderExpenses();
+renderPage();
