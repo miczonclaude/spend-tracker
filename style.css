@@ -57,27 +57,72 @@ h2 {
   display: grid;
   grid-template-columns: 340px 1fr;
   grid-template-areas:
-    "header header"
-    "totals totals"
-    "form   list";
+    "header   header"
+    "totals   totals"
+    "averages averages"
+    "breakdown breakdown"
+    "import   import"
+    "list     list";
   gap: 1.25rem;
   max-width: 1100px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
 
+/* Title on the left, currency switch on the right. */
 .page-header {
   grid-area: header;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* The two currency buttons, joined into one pill. */
+.currency-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+/* A currency button that is not selected: quiet, no fill. */
+.currency-btn {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  background: transparent;
+  color: var(--color-muted);
+  border-radius: 7px;
+}
+
+.currency-btn:hover {
+  filter: none;
+  color: var(--color-text);
+}
+
+/* The selected currency gets the same red-to-pink fill as the main buttons. */
+.currency-btn.selected {
+  background: linear-gradient(90deg, var(--color-accent-red), var(--color-accent));
+  color: var(--color-on-accent);
 }
 
 #totals {
   grid-area: totals;
 }
 
-.form-card {
-  grid-area: form;
-  /* Keep the form its natural height instead of stretching to match the list. */
-  align-self: start;
+#averages {
+  grid-area: averages;
+}
+
+.breakdown-card {
+  grid-area: breakdown;
+}
+
+.import-card {
+  grid-area: import;
 }
 
 .list-card {
@@ -91,7 +136,9 @@ h2 {
     grid-template-areas:
       "header"
       "totals"
-      "form"
+      "averages"
+      "breakdown"
+      "import"
       "list";
   }
 }
@@ -105,8 +152,8 @@ h2 {
   padding: 1.25rem;
 }
 
-/* ---------- Totals ---------- */
-#totals {
+/* ---------- Totals and averages ---------- */
+#totals, #averages {
   display: grid;
   /* As many boxes per row as fit, each at least 150px wide. */
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -131,23 +178,169 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Form ---------- */
-#expense-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-label {
-  font-size: 0.85rem;
+/* A quiet message shown where there is nothing to show yet, like "Not enough data". */
+.no-data {
+  font-size: 1.1rem;
   font-weight: 500;
   color: var(--color-muted);
+}
+
+/* ---------- Spending by category ---------- */
+/* Card title on the left, dropdowns on the right. They wrap onto two lines on a narrow screen. */
+.card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.card-header h2 {
+  margin: 0;
+}
+
+.card-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.card-controls select {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+#breakdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* One category: name | bar | amount | share. The fixed widths keep every bar starting
+   and ending at the same place, so their lengths can be compared. */
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 8rem 1fr 7rem 3rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+}
+
+/* The faint full-width strip the coloured bar sits in. */
+.bar-track {
+  height: 10px;
+  background-color: var(--color-input);
+  border-radius: 4px;
+}
+
+/* The coloured bar. Its width is set in script.js, as a percentage of the biggest category. */
+.bar-fill {
+  height: 100%;
+  background-color: var(--color-accent);
+  border-radius: 4px;
+}
+
+.breakdown-amount {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-share {
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* On a phone there is no room for four columns, so the bar moves to its own line. */
+@media (max-width: 600px) {
+  .breakdown-row {
+    grid-template-columns: 1fr auto 3rem;
+  }
+
+  .bar-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+/* ---------- Import ---------- */
+.hint {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+#import-message {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+/* The "Choose file" button inside the file field. */
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.4rem 0.9rem;
+  font-family: inherit;
+  font-weight: 600;
+  background: linear-gradient(90deg, var(--color-accent-red), var(--color-accent));
+  color: var(--color-on-accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#preview-list {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+  /* A long statement scrolls inside the card instead of making the page very tall. */
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+/* One row of the preview: date, description, amount, category dropdown.
+   flex-wrap lets the row break onto two lines on a narrow screen. */
+.preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.preview-date {
+  width: 6.5rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-description {
+  /* Takes up whatever space the other parts of the row leave free. */
+  flex: 1;
+  min-width: 8rem;
+}
+
+.preview-amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-row select {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.import-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.import-actions button {
+  padding: 0.7rem 1.2rem;
 }
 
 input, select {
@@ -216,11 +409,19 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  /* Takes the free space, which pushes the amount and the Delete button to the right. */
+  flex: 1;
+  min-width: 0;
+}
+
+.expense-title {
+  font-weight: 600;
 }
 
 .expense-amount {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .expense-meta {
@@ -242,4 +443,16 @@ button:focus-visible {
   filter: none;
   color: var(--color-danger);
   border-color: var(--color-danger);
+}
+
+/* A quieter button for the less important choice, like Cancel. */
+.secondary-btn {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.secondary-btn:hover {
+  filter: none;
+  border-color: var(--color-text);
 }

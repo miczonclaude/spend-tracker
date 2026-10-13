@@ -1,0 +1,5 @@
+# Bank statements contain private data and must never be committed.
+*.csv
+*.xlsx
+*.xls
+*.pdf
