@@ -6,6 +6,7 @@ A personal spending tracker. Plain HTML, CSS, and JavaScript — no frameworks, 
 
 - **Beginner-friendly code.** The user is learning to build with Claude Code. Keep functions small and named clearly. Prefer straightforward code over clever one-liners, even if slightly more verbose.
 - **Explain every change.** When adding or modifying code, explain what was added and why — not just a summary of the diff, but the reasoning behind decisions (why this approach over an alternative).
+- **Never copy real transaction data, balances, names or account numbers into project files.** Use made-up examples instead.
 - **One feature at a time.** Don't implement multiple features in a single pass. Before writing code for a new feature, show a short plan (what files/functions change) and get approval first.
 
 ## Planned features (build in this order)
@@ -18,10 +19,11 @@ A personal spending tracker. Plain HTML, CSS, and JavaScript — no frameworks, 
 6. ~~CSV import from Revolut~~ — done (EUR and PLN card payments, with preview and duplicate check)
 7. ~~Average spending per day / week / month~~ — done
 8. ~~Automatic categories from the store name (keyword rules + remembered corrections)~~ — done
+9. ~~PDF import from VeloBank~~ — done (card history PDF read with pdf.js; Revolut top-ups skipped)
 
 ## Current files
 
-- `index.html` — page structure (totals, averages, spending by category, Revolut import card, expense list)
+- `index.html` — page structure (totals, averages, spending by category, import card for Revolut CSV / VeloBank PDF, expense list); loads pdf.js from cdnjs
 - `style.css` — styling
 - `waves.svg` — page background (slowly moving wavy lines)
-- `script.js` — all logic: localStorage read/write, render, totals, averages, CSV import, delete
+- `script.js` — all logic: localStorage read/write, render, totals, averages, Revolut CSV + VeloBank PDF import, delete

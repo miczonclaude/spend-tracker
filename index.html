@@ -64,9 +64,9 @@
     </section>
 
     <section class="card import-card">
-      <h2>Import from Revolut</h2>
-      <p class="hint">Pick the CSV statement you exported from Revolut. Nothing is saved until you press Import.</p>
-      <input type="file" id="csv-file" accept=".csv" aria-label="Revolut CSV file">
+      <h2>Import a statement</h2>
+      <p class="hint">Pick a Revolut CSV statement or a VeloBank card history PDF. Nothing is saved until you press Import.</p>
+      <input type="file" id="csv-file" accept=".csv,.pdf" aria-label="Revolut CSV or VeloBank PDF file">
       <p id="import-message"></p>
 
       <div id="import-preview" hidden>
@@ -84,6 +84,8 @@
     </section>
   </main>
 
+  <!-- pdf.js reads the text inside PDF files; needed for VeloBank statements. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

@@ -67,7 +67,7 @@ const CATEGORY_RULES = [
     keywords: [
       "uber", "bolt", "freenow", "free now", "jakdojade", "mpk", "ztm", "mzk", "pkp", "intercity",
       "koleje", "polregio", "koleo", "flixbus", "orlen", "shell", "circle k", "lotos", "moya",
-      "parking", "skycash", "mobilet", "taxi", "transport",
+      "parking", "skycash", "mobilet", "taxi", "transport", "ovpay",
     ],
   },
   {
@@ -81,7 +81,7 @@ const CATEGORY_RULES = [
     category: "Sports",
     keywords: [
       "decathlon", "gym", "fitness", "silownia", "multisport", "zdrofit", "calypso", "mcfit",
-      "basen", "intersport", "martes", "go sport", "climbing", "wspinacz", "sport",
+      "basen", "intersport", "martes", "go sport", "climbing", "wspinacz", "sport", "playtomic",
     ],
   },
   {
@@ -111,7 +111,7 @@ const CATEGORY_RULES = [
     keywords: [
       "allegro", "amazon", "zalando", "h&m", "zara", "reserved", "ccc", "ikea", "media expert",
       "mediamarkt", "media markt", "rtv euro", "x-kom", "empik", "pepco", "tk maxx", "sinsay",
-      "cropp", "aliexpress", "temu", "shein", "vinted", "olx", "ebay", "leroy", "castorama",
+      "cropp", "aliexpress", "temu", "shein", "vinted", "olx", "ebay", "leroy", "castorama", "bol.com",
     ],
   },
 ];
@@ -738,8 +738,8 @@ function clearImport() {
   document.getElementById("csv-file").value = "";
 }
 
-// Works out which rows of the file are new expenses, then shows them in the preview.
-function prepareImport(text) {
+// Works out which rows of a Revolut CSV are new expenses, then shows them in the preview.
+function prepareRevolutImport(text) {
   clearImport();
 
   const rows = parseCsv(text);
@@ -759,13 +759,19 @@ function prepareImport(text) {
     return;
   }
 
+  const expenses = rows.filter(isOutgoingCardPayment).map(rowToExpense);
+  showNewExpenses(expenses, "");
+}
+
+// Used by both banks: leaves out expenses that are already saved or in a currency
+// the tracker doesn't know, then shows the rest in the preview.
+// extraMessage is added to the end of the summary, for things only one bank needs to say.
+function showNewExpenses(expenses, extraMessage) {
   const savedKeys = loadExpenses().map((expense) => expense.importKey);
   let alreadyImported = 0;
   let otherCurrency = 0;
 
-  for (const row of rows.filter(isOutgoingCardPayment)) {
-    const expense = rowToExpense(row);
-
+  for (const expense of expenses) {
     if (!CURRENCIES.includes(expense.currency)) {
       otherCurrency++;
     } else if (savedKeys.includes(expense.importKey)) {
@@ -780,12 +786,153 @@ function prepareImport(text) {
 
   showImportMessage(
     `Found ${pendingImport.length} new card payments. ` +
-    `Skipped ${alreadyImported} already imported and ${otherCurrency} in other currencies.`
+    `Skipped ${alreadyImported} already imported and ${otherCurrency} in other currencies.` +
+    extraMessage
   );
 
   if (pendingImport.length > 0) {
     renderImportPreview();
   }
+}
+
+// ---------- VeloBank import ----------
+
+// VeloBank only exports a PDF. The pdf.js library (loaded in index.html) pulls the text out of it.
+// Its helper script runs in the background; this is where pdf.js downloads it from.
+const PDF_WORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+// Every payment in the statement starts with two dates: when you paid and when the bank booked it.
+// Splitting the text right before each pair of dates gives one piece of text per payment.
+// The (?= ) part means "split here, but keep the dates in the piece".
+const VELOBANK_ROW_START = /(?=\d{2}\.\d{2}\.\d{4} \d{2}\.\d{2}\.\d{4} )/;
+
+// Reads one payment. Example of the text it expects:
+// "01.01.2020 03.01.2020 Operacja kartą ... w Example Shop, SOMECITY, NL -12,34 EUR <balance> EUR"
+// The parts in ( ) are what we keep: the payment date, the description, the amount and the currency.
+// The amount must start with "-", so money coming in (refunds) is not matched.
+// The last number is the balance after the payment; it is kept to tell identical payments apart.
+const VELOBANK_ROW_PATTERN =
+  /^(\d{2}\.\d{2}\.\d{4}) \d{2}\.\d{2}\.\d{4} (.+?) (-\d[\d ]*,\d{2}) ([A-Z]{3}) (-?\d[\d ]*,\d{2}) [A-Z]{3}/;
+
+// Inside the description, the store comes after "<amount> <currency> w ".
+// "...na kwotę 12,34 EUR w Example Shop, SOMECITY, NL" -> "Example Shop, SOMECITY, NL"
+const VELOBANK_STORE_PATTERN = /\d,\d{2} [A-Z]{3} w (.+)$/;
+
+// Gets all the text out of a PDF file as one long line.
+// Each step of reading a PDF takes a moment, which is why there are so many "await"s.
+async function readPdfText(file) {
+  // Set here rather than at the top of the file: if pdf.js didn't download, pdfjsLib doesn't exist,
+  // and using it at the top would crash the whole script instead of just this import.
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+
+  const data = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: data }).promise;
+  const pieces = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+
+    for (const item of content.items) {
+      pieces.push(item.str);
+    }
+  }
+
+  // Line breaks and double spaces would get in the way of the patterns, so turn them into single spaces.
+  return pieces.join(" ").replace(/\s+/g, " ");
+}
+
+// Turns a Polish-style number like "-1 234,56" into 1234.56 (always positive).
+function parsePolishAmount(text) {
+  const plainNumber = text.replace(/ /g, "").replace(",", ".");
+  return Math.abs(Number(plainNumber));
+}
+
+// "01.01.2020" -> "2020-01-01", the date format the tracker stores.
+function convertPolishDate(text) {
+  const [day, month, year] = text.split(".");
+  return `${year}-${month}-${day}`;
+}
+
+// Gets the store from a description. If the description looks different, the whole description is used.
+function findVeloBankStore(description) {
+  const match = description.match(VELOBANK_STORE_PATTERN);
+  return match ? match[1] : description;
+}
+
+// Card payments to your own Revolut account just move money there.
+// The real spending is already counted by the Revolut import, so these must be skipped.
+function isRevolutTopUp(store) {
+  return simplifyText(store).startsWith("revolut");
+}
+
+// Turns one payment's text into an expense, or returns null if the text isn't a payment.
+function veloBankRowToExpense(rowText) {
+  const match = rowText.match(VELOBANK_ROW_PATTERN);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, paymentDate, description, amount, currency, balance] = match;
+  const store = findVeloBankStore(description);
+
+  return {
+    amount: parsePolishAmount(amount),
+    currency: currency,
+    category: detectCategory(store),
+    card: "VeloBank",
+    date: convertPolishDate(paymentDate),
+    note: store,
+    // The balance is part of the key because two coffees on the same day can have the same amount and store.
+    importKey: [convertPolishDate(paymentDate), "VeloBank", amount, balance, store].join("|"),
+  };
+}
+
+// Reads a VeloBank PDF statement, then shows its new payments in the preview.
+async function prepareVeloBankImport(file) {
+  clearImport();
+
+  // "typeof" checks whether pdfjsLib exists without crashing when it doesn't.
+  if (typeof pdfjsLib === "undefined") {
+    showImportMessage("The PDF reader didn't load. Check your internet connection and refresh the page.");
+    return;
+  }
+
+  showImportMessage("Reading the PDF...");
+
+  let text;
+
+  try {
+    text = await readPdfText(file);
+  } catch (error) {
+    showImportMessage("Couldn't read this PDF. Is it the card history downloaded from VeloBank?");
+    return;
+  }
+
+  const expenses = [];
+  let topUps = 0;
+
+  for (const rowText of text.split(VELOBANK_ROW_START)) {
+    const expense = veloBankRowToExpense(rowText);
+
+    if (expense === null) {
+      continue;
+    }
+
+    if (isRevolutTopUp(expense.note)) {
+      topUps++;
+    } else {
+      expenses.push(expense);
+    }
+  }
+
+  if (expenses.length === 0 && topUps === 0) {
+    showImportMessage("No card payments found. Is this the card history downloaded from VeloBank?");
+    return;
+  }
+
+  showNewExpenses(expenses, ` Also skipped ${topUps} top-ups to Revolut (already counted by the Revolut import).`);
 }
 
 // Builds the dropdown used to pick the category of one previewed expense.
@@ -878,8 +1025,8 @@ function confirmImport() {
   renderPage();
 }
 
-// Runs when the user picks a file. Reading a file takes a moment,
-// so "await" pauses this function until the text is ready.
+// Runs when the user picks a file. A PDF is a VeloBank statement, anything else a Revolut CSV.
+// Reading a file takes a moment, so "await" pauses this function until it's ready.
 async function handleFileChosen(event) {
   const file = event.target.files[0];
 
@@ -887,8 +1034,12 @@ async function handleFileChosen(event) {
     return;
   }
 
-  const text = await file.text();
-  prepareImport(text);
+  if (file.name.toLowerCase().endsWith(".pdf")) {
+    await prepareVeloBankImport(file);
+  } else {
+    const text = await file.text();
+    prepareRevolutImport(text);
+  }
 }
 
 document.getElementById("breakdown-period").addEventListener("change", renderCategoryBreakdown);
