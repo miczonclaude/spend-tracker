@@ -49,6 +49,19 @@
       </div>
     </section>
 
+    <section class="card monthly-card">
+      <div class="card-header">
+        <h2>Monthly spending · last 12 months</h2>
+        <span id="monthly-summary" class="monthly-summary"></span>
+      </div>
+      <!-- Bars, month labels and the hover box are all filled in by renderMonthlyChart() in script.js. -->
+      <div class="monthly-chart-area">
+        <div id="monthly-chart" class="monthly-chart"></div>
+        <div id="monthly-labels" class="monthly-labels"></div>
+        <div id="monthly-tooltip" class="monthly-tooltip" hidden></div>
+      </div>
+    </section>
+
     <section class="card breakdown-card">
       <div class="card-header">
         <h2>Spending by category</h2>

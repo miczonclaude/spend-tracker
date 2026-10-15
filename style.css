@@ -60,6 +60,7 @@ h2 {
     "header   header"
     "totals   totals"
     "averages averages"
+    "monthly  monthly"
     "breakdown breakdown"
     "import   import"
     "backup   backup"
@@ -118,6 +119,10 @@ h2 {
   grid-area: averages;
 }
 
+.monthly-card {
+  grid-area: monthly;
+}
+
 .breakdown-card {
   grid-area: breakdown;
 }
@@ -142,6 +147,7 @@ h2 {
       "header"
       "totals"
       "averages"
+      "monthly"
       "breakdown"
       "import"
       "backup"
@@ -189,6 +195,86 @@ h2 {
   font-size: 1.1rem;
   font-weight: 500;
   color: var(--color-muted);
+}
+
+/* ---------- Monthly spending chart ---------- */
+.monthly-summary {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+/* The tooltip is positioned relative to this box. */
+.monthly-chart-area {
+  position: relative;
+}
+
+/* The row of month columns. Bars grow up from the faint line at the bottom. */
+.monthly-chart {
+  display: flex;
+  align-items: flex-end;
+  /* A gap between bars keeps neighbouring months visibly separate. */
+  gap: 6px;
+  height: 180px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Each month's column is full height, so the whole strip is easy to hover, not just the bar. */
+.month-column {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 4px 4px 0 0;
+}
+
+.month-column:hover,
+.month-column:focus-visible {
+  background-color: var(--color-input);
+  outline: none;
+}
+
+/* The bar itself: same pink as the category bars, rounded only at the top. Height is set in script.js. */
+.month-bar {
+  width: 100%;
+  background-color: var(--color-accent);
+  border-radius: 4px 4px 0 0;
+}
+
+/* The current month isn't finished, so its bar is paler (the hover text also says "so far"). */
+.month-bar.current {
+  opacity: 0.5;
+}
+
+/* The month labels, lined up under the columns with the same flex sizing and gap. */
+.monthly-labels {
+  display: flex;
+  gap: 6px;
+  margin-top: 0.4rem;
+}
+
+.month-label {
+  flex: 1;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+/* The small box that shows the month and amount of the hovered bar. */
+.monthly-tooltip {
+  position: absolute;
+  top: 0;
+  /* Centred over the column: "left" is set to the column's middle in script.js. */
+  transform: translate(-50%, -110%);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-text);
+  background-color: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  /* Lets the mouse pass through, so the box never blocks the bars under it. */
+  pointer-events: none;
 }
 
 /* ---------- Spending by category ---------- */

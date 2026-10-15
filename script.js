@@ -490,6 +490,191 @@ function renderAverages() {
   renderAverageBox("average-month", expenses, monthlyRange);
 }
 
+// ---------- Monthly spending chart ----------
+
+// How many months the chart shows, ending with the current month.
+const CHART_MONTH_COUNT = 12;
+
+// Turns "2026-10" into a Date on the first day of that month.
+function parseMonthText(monthText) {
+  return parseDateText(`${monthText}-01`);
+}
+
+// Turns "2026-10" into "Oct" (for the labels under the bars).
+function formatShortMonth(monthText) {
+  return parseMonthText(monthText).toLocaleDateString("en-GB", { month: "short" });
+}
+
+// Turns "2026-10" into "Oct 2026" (for the hover box, where the year matters).
+function formatMonthWithYear(monthText) {
+  return parseMonthText(monthText).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+}
+
+// Adds up spending per month for the last few months, in one currency.
+// Returns a list like [{ month: "2025-11", total: 0 }, { month: "2025-12", total: 812.4 }, ...], oldest first.
+// Months without spending are included with a total of 0, so they show as gaps in the chart.
+function sumByMonth(expenses, currency, monthCount) {
+  const totals = {};
+
+  for (const expense of expenses) {
+    if (getCurrency(expense) === currency) {
+      // Dates look like "2026-10-12", so the first 7 characters are the month: "2026-10".
+      const month = expense.date.slice(0, 7);
+      totals[month] = (totals[month] || 0) + expense.amount;
+    }
+  }
+
+  const months = [];
+  const today = new Date();
+
+  // Counts backwards from (monthCount - 1) months ago up to this month, so the oldest month comes first.
+  for (let monthsAgo = monthCount - 1; monthsAgo >= 0; monthsAgo--) {
+    const firstDay = new Date(today.getFullYear(), today.getMonth() - monthsAgo, 1);
+    const monthText = formatDateAsText(firstDay).slice(0, 7);
+    months.push({ month: monthText, total: totals[monthText] || 0 });
+  }
+
+  return months;
+}
+
+// The current month isn't over yet, so its bar and hover text are marked as "so far".
+function isCurrentMonth(monthText) {
+  return monthText === formatDateAsText(new Date()).slice(0, 7);
+}
+
+// Text for the hover box and screen readers, like "Sep 2026 · €1240.50" or "Oct 2026 (so far) · €310.00".
+function describeMonth(month, currency) {
+  const soFar = isCurrentMonth(month.month) ? " (so far)" : "";
+  return `${formatMonthWithYear(month.month)}${soFar} · ${formatMoney(month.total, currency)}`;
+}
+
+// Shows the hover box above one month's column.
+function showMonthlyTooltip(column, month, currency) {
+  const tooltip = document.getElementById("monthly-tooltip");
+  tooltip.textContent = describeMonth(month, currency);
+  tooltip.hidden = false;
+
+  // offsetLeft is the column's distance from the left edge of the chart area; we aim at its middle.
+  const columnMiddle = column.offsetLeft + column.offsetWidth / 2;
+
+  // Near the first or last month, a centred box would stick out of the card, so we keep it inside.
+  const halfTooltip = tooltip.offsetWidth / 2;
+  const areaWidth = column.parentElement.offsetWidth;
+  const left = Math.min(Math.max(columnMiddle, halfTooltip), areaWidth - halfTooltip);
+
+  tooltip.style.left = `${left}px`;
+}
+
+function hideMonthlyTooltip() {
+  document.getElementById("monthly-tooltip").hidden = true;
+}
+
+// Builds one month of the chart: a full-height column (easy to hover) with the bar inside it.
+function createMonthColumn(month, biggestTotal, currency) {
+  const column = document.createElement("div");
+  column.className = "month-column";
+  // Lets keyboard users Tab through the months; the label is what screen readers announce.
+  column.tabIndex = 0;
+  column.setAttribute("aria-label", describeMonth(month, currency));
+
+  // Months with no spending get no bar at all, just the empty column.
+  if (month.total > 0) {
+    const bar = document.createElement("div");
+    bar.className = "month-bar";
+    if (isCurrentMonth(month.month)) {
+      bar.classList.add("current");
+    }
+    // The biggest month fills the full height; the others are sized relative to it.
+    bar.style.height = `${(month.total / biggestTotal) * 100}%`;
+    column.appendChild(bar);
+  }
+
+  column.addEventListener("mouseenter", () => showMonthlyTooltip(column, month, currency));
+  column.addEventListener("focus", () => showMonthlyTooltip(column, month, currency));
+  column.addEventListener("mouseleave", hideMonthlyTooltip);
+  column.addEventListener("blur", hideMonthlyTooltip);
+
+  return column;
+}
+
+// Builds the "Oct" label under one month.
+function createMonthLabel(month) {
+  const label = document.createElement("span");
+  label.className = "month-label";
+  label.textContent = formatShortMonth(month.month);
+  return label;
+}
+
+// Writes "Average €980.00 / month · Highest €1410.20 in Jul" next to the chart title.
+// The average only counts finished months that have spending, so the half-done current month
+// and the months before you started using the tracker don't pull it down.
+function renderMonthlySummary(months, currency) {
+  let finishedTotal = 0;
+  let finishedCount = 0;
+  let biggestMonth = months[0];
+
+  for (const month of months) {
+    if (month.total > biggestMonth.total) {
+      biggestMonth = month;
+    }
+
+    if (month.total > 0 && !isCurrentMonth(month.month)) {
+      finishedTotal += month.total;
+      finishedCount += 1;
+    }
+  }
+
+  const summary = document.getElementById("monthly-summary");
+
+  if (biggestMonth.total === 0) {
+    summary.textContent = "";
+    return;
+  }
+
+  const highestText = `Highest ${formatMoney(biggestMonth.total, currency)} in ${formatShortMonth(biggestMonth.month)}`;
+
+  // With no finished month yet there is nothing to average, so only the highest month is shown.
+  if (finishedCount === 0) {
+    summary.textContent = highestText;
+    return;
+  }
+
+  const averageText = `Average ${formatMoney(finishedTotal / finishedCount, currency)} / month`;
+  summary.textContent = `${averageText} · ${highestText}`;
+}
+
+function renderMonthlyChart() {
+  const currency = getSelectedCurrency();
+  const months = sumByMonth(loadExpenses(), currency, CHART_MONTH_COUNT);
+
+  const chart = document.getElementById("monthly-chart");
+  const labels = document.getElementById("monthly-labels");
+  chart.innerHTML = "";
+  labels.innerHTML = "";
+  hideMonthlyTooltip();
+  renderMonthlySummary(months, currency);
+
+  let biggestTotal = 0;
+  for (const month of months) {
+    if (month.total > biggestTotal) {
+      biggestTotal = month.total;
+    }
+  }
+
+  if (biggestTotal === 0) {
+    const message = document.createElement("p");
+    message.className = "no-data";
+    message.textContent = "No spending in the last 12 months.";
+    chart.appendChild(message);
+    return;
+  }
+
+  for (const month of months) {
+    chart.appendChild(createMonthColumn(month, biggestTotal, currency));
+    labels.appendChild(createMonthLabel(month));
+  }
+}
+
 // ---------- Spending by category ----------
 
 // Returns the first and last date (as text) of the period picked in the dropdown.
@@ -620,6 +805,7 @@ function renderPage() {
   renderExpenses();
   renderTotals();
   renderAverages();
+  renderMonthlyChart();
   renderCategoryBreakdown();
 }
 
