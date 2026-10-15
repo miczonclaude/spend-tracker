@@ -81,8 +81,9 @@ h2 {
   gap: 1rem;
 }
 
-/* The two currency buttons, joined into one pill. */
-.currency-switch {
+/* A row of buttons joined into one pill: the currency switch, and the period switch in "Spending by category". */
+.currency-switch,
+.period-switch {
   display: flex;
   gap: 4px;
   padding: 4px;
@@ -91,8 +92,9 @@ h2 {
   border-radius: 10px;
 }
 
-/* A currency button that is not selected: quiet, no fill. */
-.currency-btn {
+/* A button that is not selected: quiet, no fill. */
+.currency-btn,
+.period-btn {
   padding: 0.4rem 0.9rem;
   font-size: 0.9rem;
   background: transparent;
@@ -100,13 +102,15 @@ h2 {
   border-radius: 7px;
 }
 
-.currency-btn:hover {
+.currency-btn:hover,
+.period-btn:hover {
   filter: none;
   color: var(--color-text);
 }
 
-/* The selected currency gets the same red-to-pink fill as the main buttons. */
-.currency-btn.selected {
+/* The selected button gets the same red-to-pink fill as the main buttons. */
+.currency-btn.selected,
+.period-btn.selected {
   background: linear-gradient(90deg, var(--color-accent-red), var(--color-accent));
   color: var(--color-on-accent);
 }
@@ -292,14 +296,57 @@ h2 {
   margin: 0;
 }
 
+/* The period switch and the arrows. They wrap onto two lines on a narrow screen. */
 .card-controls {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.card-controls select {
-  padding: 0.35rem 0.5rem;
+/* ‹ label › */
+.period-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* The "hidden" attribute normally hides an element, but "display: flex" above would override it. */
+.period-nav[hidden] {
+  display: none;
+}
+
+/* A fixed width keeps the arrows from jumping around as the label changes length. */
+.period-label {
+  min-width: 8.5rem;
+  text-align: center;
   font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Small outlined arrow buttons instead of the big pink ones. */
+.period-arrow {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.period-arrow:hover {
+  filter: none;
+  border-color: var(--color-text);
+}
+
+/* Faded when there is nowhere further to go. */
+.period-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+  border-color: var(--color-border);
 }
 
 #breakdown-list {

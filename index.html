@@ -62,11 +62,18 @@
       <div class="card-header">
         <h2>Spending by category</h2>
         <div class="card-controls">
-          <select id="breakdown-period" aria-label="Period">
-            <option value="this-month">This month</option>
-            <option value="last-month">Last month</option>
-            <option value="all">All time</option>
-          </select>
+          <div class="period-switch" role="group" aria-label="Period type">
+            <button type="button" class="period-btn" data-period="week">Week</button>
+            <button type="button" class="period-btn" data-period="month">Month</button>
+            <button type="button" class="period-btn" data-period="all">All time</button>
+          </div>
+          <!-- Steps back and forward one week or month. Hidden for "All time". -->
+          <div class="period-nav" id="period-nav">
+            <button type="button" id="period-prev" class="period-arrow" aria-label="Previous period">‹</button>
+            <!-- aria-live makes screen readers read the new label after each step. -->
+            <span id="period-label" class="period-label" aria-live="polite"></span>
+            <button type="button" id="period-next" class="period-arrow" aria-label="Next period">›</button>
+          </div>
         </div>
       </div>
       <ul id="breakdown-list"></ul>

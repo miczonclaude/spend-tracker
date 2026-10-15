@@ -200,8 +200,7 @@ function filterBySelectedCategory(expenses) {
     return expenses;
   }
 
-  const period = document.getElementById("breakdown-period").value;
-  const range = getBreakdownRange(period, new Date());
+  const range = getBreakdownRange();
 
   return expenses.filter((expense) => {
     const isInRange = expense.date >= range.startText && expense.date <= range.endText;
@@ -218,12 +217,9 @@ function renderCategoryFilterBar() {
     return;
   }
 
-  // The visible text of the chosen period option, like "This month".
-  const periodSelect = document.getElementById("breakdown-period");
-  const periodName = periodSelect.options[periodSelect.selectedIndex].text;
-
+  // The same label the breakdown shows, like "This month" or "Aug 2026".
   document.getElementById("category-filter-text").textContent =
-    `Showing: ${selectedCategory} · ${periodName}`;
+    `Showing: ${selectedCategory} · ${getBreakdownLabel()}`;
   bar.hidden = false;
 }
 
@@ -674,22 +670,110 @@ function renderMonthlyChart() {
 
 // ---------- Spending by category ----------
 
-// Returns the first and last date (as text) of the period picked in the dropdown.
-function getBreakdownRange(period, today) {
-  if (period === "this-month") {
-    const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+// The kind of period the breakdown shows: "week", "month" or "all".
+let breakdownPeriodType = "month";
+
+// Which week or month: 0 is the current one, -1 the one before, -2 the one before that, and so on.
+let breakdownOffset = 0;
+
+// Returns the first and last date (as text) of the period being shown.
+function getBreakdownRange() {
+  const today = new Date();
+
+  if (breakdownPeriodType === "week") {
+    // Monday of this week, moved back 7 days for every step back.
+    const thisMonday = getStartOfWeek(today);
+    const start = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() + breakdownOffset * 7);
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
     return { startText: formatDateAsText(start), endText: formatDateAsText(end) };
   }
 
-  if (period === "last-month") {
-    const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const end = new Date(today.getFullYear(), today.getMonth(), 0);
+  if (breakdownPeriodType === "month") {
+    // Day 0 of the next month is the last day of this one.
+    const start = new Date(today.getFullYear(), today.getMonth() + breakdownOffset, 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + breakdownOffset + 1, 0);
     return { startText: formatDateAsText(start), endText: formatDateAsText(end) };
   }
 
   // "All time": a range so wide that every date falls inside it.
   return { startText: "0000-01-01", endText: "9999-12-31" };
+}
+
+// Turns "2026-09-29" into "29 Sep".
+function formatDayMonth(dateText) {
+  return parseDateText(dateText).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+// The name of the period being shown, like "This week", "Last month", "29 Sep – 5 Oct" or "Aug 2026".
+function getBreakdownLabel() {
+  if (breakdownPeriodType === "all") {
+    return "All time";
+  }
+
+  if (breakdownPeriodType === "week") {
+    if (breakdownOffset === 0) {
+      return "This week";
+    }
+    if (breakdownOffset === -1) {
+      return "Last week";
+    }
+    const range = getBreakdownRange();
+    return `${formatDayMonth(range.startText)} – ${formatDayMonth(range.endText)}`;
+  }
+
+  if (breakdownOffset === 0) {
+    return "This month";
+  }
+  if (breakdownOffset === -1) {
+    return "Last month";
+  }
+  // "2026-08-01" -> "2026-08" -> "Aug 2026" (formatMonthWithYear lives in the monthly chart section).
+  return formatMonthWithYear(getBreakdownRange().startText.slice(0, 7));
+}
+
+// You can step back until the period that holds your oldest expense (in the currency shown).
+function canStepBack() {
+  const expenses = filterByCurrency(loadExpenses(), getSelectedCurrency());
+  const firstDate = findFirstExpenseDate(expenses);
+
+  if (firstDate === null) {
+    return false;
+  }
+
+  return getBreakdownRange().startText > formatDateAsText(firstDate);
+}
+
+// You can step forward until the current week or month; there is nothing to see in the future.
+function canStepForward() {
+  return breakdownOffset < 0;
+}
+
+// Picks week, month or all time, and jumps back to the current week or month.
+function setBreakdownPeriodType(type) {
+  breakdownPeriodType = type;
+  breakdownOffset = 0;
+  renderPage();
+}
+
+// Moves one week or month back (direction -1) or forward (direction 1).
+function stepBreakdownPeriod(direction) {
+  breakdownOffset = breakdownOffset + direction;
+  renderPage();
+}
+
+// Highlights the chosen period type, writes the label, and switches the arrows on or off.
+function renderBreakdownControls() {
+  for (const button of document.querySelectorAll(".period-btn")) {
+    const isSelected = button.dataset.period === breakdownPeriodType;
+    button.classList.toggle("selected", isSelected);
+    button.setAttribute("aria-pressed", isSelected);
+  }
+
+  // "All time" has nothing to step through, so the arrows and label are hidden.
+  document.getElementById("period-nav").hidden = breakdownPeriodType === "all";
+  document.getElementById("period-label").textContent = getBreakdownLabel();
+  document.getElementById("period-prev").disabled = !canStepBack();
+  document.getElementById("period-next").disabled = !canStepForward();
 }
 
 // Adds up spending per category for one currency and date range.
@@ -767,9 +851,10 @@ function createBreakdownRow(entry, biggestTotal, grandTotal, currency) {
 }
 
 function renderCategoryBreakdown() {
-  const period = document.getElementById("breakdown-period").value;
+  renderBreakdownControls();
+
   const currency = getSelectedCurrency();
-  const range = getBreakdownRange(period, new Date());
+  const range = getBreakdownRange();
   const entries = sumByCategory(loadExpenses(), range.startText, range.endText, currency);
 
   const list = document.getElementById("breakdown-list");
@@ -1504,8 +1589,12 @@ async function handleFileChosen(event) {
   }
 }
 
-// The period also limits the filtered expense list, so the whole page is redrawn.
-document.getElementById("breakdown-period").addEventListener("change", renderPage);
+// The period also limits the filtered expense list, so these handlers redraw the whole page.
+for (const button of document.querySelectorAll(".period-btn")) {
+  button.addEventListener("click", () => setBreakdownPeriodType(button.dataset.period));
+}
+document.getElementById("period-prev").addEventListener("click", () => stepBreakdownPeriod(-1));
+document.getElementById("period-next").addEventListener("click", () => stepBreakdownPeriod(1));
 document.getElementById("category-filter-clear").addEventListener("click", clearCategoryFilter);
 
 for (const button of document.querySelectorAll(".currency-btn")) {

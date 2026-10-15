@@ -14,7 +14,7 @@ A personal spending tracker. Plain HTML, CSS, and JavaScript — no frameworks, 
 1. ~~Add an expense (amount, category, card, date, optional note)~~ — done, then removed: expenses now come only from the CSV import
 2. ~~List of expenses, with delete~~ — done
 3. ~~Totals per day / week / month~~ — done (the "Today" box was later removed: data only arrives with each statement import, so it was usually empty)
-4. Breakdown by category — done (the Spending by category card); breakdown by card — not built yet
+4. Breakdown by category — done (the Spending by category card; browse any week or month with ‹ › arrows, or all time); breakdown by card — not built yet
 5. ~~Bar chart of spending per month~~ — done (last 12 months, hover for month and amount)
 6. ~~CSV import from Revolut~~ — done (EUR and PLN card payments, with preview and duplicate check)
 7. ~~Average spending per day / week / month~~ — done
