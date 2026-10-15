@@ -60,7 +60,7 @@ h2 {
     "header   header"
     "totals   totals"
     "averages averages"
-    "monthly  monthly"
+    "chart    chart"
     "breakdown breakdown"
     "import   import"
     "backup   backup"
@@ -123,8 +123,8 @@ h2 {
   grid-area: averages;
 }
 
-.monthly-card {
-  grid-area: monthly;
+.chart-card {
+  grid-area: chart;
 }
 
 .breakdown-card {
@@ -151,7 +151,7 @@ h2 {
       "header"
       "totals"
       "averages"
-      "monthly"
+      "chart"
       "breakdown"
       "import"
       "backup"
@@ -201,29 +201,29 @@ h2 {
   color: var(--color-muted);
 }
 
-/* ---------- Monthly spending chart ---------- */
-.monthly-summary {
+/* ---------- Spending chart (weekly or monthly) ---------- */
+.chart-summary {
   font-size: 0.85rem;
   color: var(--color-muted);
 }
 
 /* The tooltip is positioned relative to this box. */
-.monthly-chart-area {
+.chart-area {
   position: relative;
 }
 
-/* The row of month columns. Bars grow up from the faint line at the bottom. */
-.monthly-chart {
+/* The row of columns. Bars grow up from the faint line at the bottom. */
+.spending-chart {
   display: flex;
   align-items: flex-end;
-  /* A gap between bars keeps neighbouring months visibly separate. */
+  /* A gap between bars keeps neighbouring weeks or months visibly separate. */
   gap: 6px;
   height: 180px;
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Each month's column is full height, so the whole strip is easy to hover, not just the bar. */
-.month-column {
+/* Each column is full height, so the whole strip is easy to hover, not just the bar. */
+.chart-column {
   flex: 1;
   height: 100%;
   display: flex;
@@ -231,40 +231,53 @@ h2 {
   border-radius: 4px 4px 0 0;
 }
 
-.month-column:hover,
-.month-column:focus-visible {
+.chart-column:hover,
+.chart-column:focus-visible {
   background-color: var(--color-input);
   outline: none;
 }
 
 /* The bar itself: same pink as the category bars, rounded only at the top. Height is set in script.js. */
-.month-bar {
+.chart-bar {
   width: 100%;
   background-color: var(--color-accent);
   border-radius: 4px 4px 0 0;
 }
 
-/* The current month isn't finished, so its bar is paler (the hover text also says "so far"). */
-.month-bar.current {
+/* The current week or month isn't finished, so its bar is paler (the hover text also says "so far"). */
+.chart-bar.current {
   opacity: 0.5;
 }
 
-/* The month labels, lined up under the columns with the same flex sizing and gap. */
-.monthly-labels {
+/* The labels, lined up under the columns with the same flex sizing and gap. */
+.chart-labels {
   display: flex;
   gap: 6px;
   margin-top: 0.4rem;
 }
 
-.month-label {
+.chart-label {
   flex: 1;
-  text-align: center;
+  /* width: 0 makes every label take exactly the same share of the row, however long its text is. */
+  width: 0;
+  /* A week label ("22 Sep") can be wider than its column. In a flex box, "center" lets the text
+     spill out evenly on both sides, so it stays centred under its bar instead of drifting right. */
+  display: flex;
+  justify-content: center;
+  white-space: nowrap;
   font-size: 0.75rem;
   color: var(--color-muted);
 }
 
-/* The small box that shows the month and amount of the hovered bar. */
-.monthly-tooltip {
+/* The title with the summary under it, on the left of the card header. */
+.chart-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* The small box that shows the period and amount of the hovered bar. */
+.chart-tooltip {
   position: absolute;
   top: 0;
   /* Centred over the column: "left" is set to the column's middle in script.js. */

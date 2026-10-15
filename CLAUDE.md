@@ -15,7 +15,7 @@ A personal spending tracker. Plain HTML, CSS, and JavaScript — no frameworks, 
 2. ~~List of expenses, with delete~~ — done
 3. ~~Totals per day / week / month~~ — done (the "Today" box was later removed: data only arrives with each statement import, so it was usually empty)
 4. Breakdown by category — done (the Spending by category card; browse any week or month with ‹ › arrows, or all time); breakdown by card — not built yet
-5. ~~Bar chart of spending per month~~ — done (last 12 months, hover for month and amount)
+5. ~~Bar chart of spending~~ — done (Week / Month switch: last 12 weeks or last 12 months, hover for exact amount)
 6. ~~CSV import from Revolut~~ — done (EUR and PLN card payments, with preview and duplicate check)
 7. ~~Average spending per day / week / month~~ — done
 8. ~~Automatic categories from the store name (keyword rules + remembered corrections)~~ — done
@@ -26,7 +26,7 @@ A personal spending tracker. Plain HTML, CSS, and JavaScript — no frameworks, 
 
 ## Current files
 
-- `index.html` — page structure (totals, averages, monthly spending chart, spending by category, import card for Revolut CSV / VeloBank PDF, backup card, expense list); loads pdf.js from cdnjs
+- `index.html` — page structure (totals, averages, weekly/monthly spending chart, spending by category, import card for Revolut CSV / VeloBank PDF, backup card, expense list); loads pdf.js from cdnjs
 - `style.css` — styling
 - `waves.svg` — page background (slowly moving wavy lines)
-- `script.js` — all logic: localStorage read/write, render, totals, averages, monthly chart, Revolut CSV + VeloBank PDF import, backup/restore, delete
+- `script.js` — all logic: localStorage read/write, render, totals, averages, spending chart, Revolut CSV + VeloBank PDF import, backup/restore, delete

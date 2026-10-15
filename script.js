@@ -483,10 +483,13 @@ function renderAverages() {
   renderAverageBox("average-month", expenses, monthlyRange);
 }
 
-// ---------- Monthly spending chart ----------
+// ---------- Spending chart (weekly or monthly) ----------
 
-// How many months the chart shows, ending with the current month.
-const CHART_MONTH_COUNT = 12;
+// How many bars the chart shows, ending with the current week or month.
+const CHART_BAR_COUNT = 12;
+
+// What the chart shows: "week" or "month". Picked with the switch on the chart card.
+let chartPeriodType = "month";
 
 // Turns "2026-10" into a Date on the first day of that month.
 function parseMonthText(monthText) {
@@ -503,8 +506,14 @@ function formatMonthWithYear(monthText) {
   return parseMonthText(monthText).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 }
 
-// Adds up spending per month for the last few months, in one currency.
-// Returns a list like [{ month: "2025-11", total: 0 }, { month: "2025-12", total: 812.4 }, ...], oldest first.
+// Both functions below return the bars in the same shape, so the drawing code doesn't need to
+// know whether it is drawing weeks or months:
+//   label      - short text under the bar, like "Oct" or "22 Sep"
+//   longLabel  - text for the hover box, like "Oct 2026" or "22 Sep – 28 Sep"
+//   total      - money spent
+//   isCurrent  - true for the week or month that isn't finished yet
+
+// Adds up spending per month for the last few months, in one currency. Oldest month first.
 // Months without spending are included with a total of 0, so they show as gaps in the chart.
 function sumByMonth(expenses, currency, monthCount) {
   const totals = {};
@@ -517,40 +526,74 @@ function sumByMonth(expenses, currency, monthCount) {
     }
   }
 
-  const months = [];
+  const bars = [];
   const today = new Date();
 
   // Counts backwards from (monthCount - 1) months ago up to this month, so the oldest month comes first.
   for (let monthsAgo = monthCount - 1; monthsAgo >= 0; monthsAgo--) {
     const firstDay = new Date(today.getFullYear(), today.getMonth() - monthsAgo, 1);
     const monthText = formatDateAsText(firstDay).slice(0, 7);
-    months.push({ month: monthText, total: totals[monthText] || 0 });
+
+    bars.push({
+      label: formatShortMonth(monthText),
+      longLabel: formatMonthWithYear(monthText),
+      total: totals[monthText] || 0,
+      isCurrent: monthsAgo === 0,
+    });
   }
 
-  return months;
+  return bars;
 }
 
-// The current month isn't over yet, so its bar and hover text are marked as "so far".
-function isCurrentMonth(monthText) {
-  return monthText === formatDateAsText(new Date()).slice(0, 7);
+// Adds up spending per week (Monday to Sunday) for the last few weeks, in one currency. Oldest week first.
+// Weeks without spending are included with a total of 0, so they show as gaps in the chart.
+function sumByWeek(expenses, currency, weekCount) {
+  // Each expense is added to the Monday of its week, like { "2026-09-22": 212.4, ... }.
+  const totals = {};
+
+  for (const expense of expenses) {
+    if (getCurrency(expense) === currency) {
+      const monday = formatDateAsText(getStartOfWeek(parseDateText(expense.date)));
+      totals[monday] = (totals[monday] || 0) + expense.amount;
+    }
+  }
+
+  const bars = [];
+  const thisMonday = getStartOfWeek(new Date());
+
+  // Counts backwards from (weekCount - 1) weeks ago up to this week, so the oldest week comes first.
+  for (let weeksAgo = weekCount - 1; weeksAgo >= 0; weeksAgo--) {
+    const monday = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - weeksAgo * 7);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+    const mondayText = formatDateAsText(monday);
+
+    bars.push({
+      label: formatDayMonth(mondayText),
+      longLabel: `${formatDayMonth(mondayText)} – ${formatDayMonth(formatDateAsText(sunday))}`,
+      total: totals[mondayText] || 0,
+      isCurrent: weeksAgo === 0,
+    });
+  }
+
+  return bars;
 }
 
-// Text for the hover box and screen readers, like "Sep 2026 · €1240.50" or "Oct 2026 (so far) · €310.00".
-function describeMonth(month, currency) {
-  const soFar = isCurrentMonth(month.month) ? " (so far)" : "";
-  return `${formatMonthWithYear(month.month)}${soFar} · ${formatMoney(month.total, currency)}`;
+// Text for the hover box and screen readers, like "Sep 2026 · €1240.50" or "6 Oct – 12 Oct (so far) · €95.00".
+function describeBar(bar, currency) {
+  const soFar = bar.isCurrent ? " (so far)" : "";
+  return `${bar.longLabel}${soFar} · ${formatMoney(bar.total, currency)}`;
 }
 
-// Shows the hover box above one month's column.
-function showMonthlyTooltip(column, month, currency) {
-  const tooltip = document.getElementById("monthly-tooltip");
-  tooltip.textContent = describeMonth(month, currency);
+// Shows the hover box above one bar's column.
+function showChartTooltip(column, bar, currency) {
+  const tooltip = document.getElementById("chart-tooltip");
+  tooltip.textContent = describeBar(bar, currency);
   tooltip.hidden = false;
 
   // offsetLeft is the column's distance from the left edge of the chart area; we aim at its middle.
   const columnMiddle = column.offsetLeft + column.offsetWidth / 2;
 
-  // Near the first or last month, a centred box would stick out of the card, so we keep it inside.
+  // Near the first or last bar, a centred box would stick out of the card, so we keep it inside.
   const halfTooltip = tooltip.offsetWidth / 2;
   const areaWidth = column.parentElement.offsetWidth;
   const left = Math.min(Math.max(columnMiddle, halfTooltip), areaWidth - halfTooltip);
@@ -558,113 +601,153 @@ function showMonthlyTooltip(column, month, currency) {
   tooltip.style.left = `${left}px`;
 }
 
-function hideMonthlyTooltip() {
-  document.getElementById("monthly-tooltip").hidden = true;
+function hideChartTooltip() {
+  document.getElementById("chart-tooltip").hidden = true;
 }
 
-// Builds one month of the chart: a full-height column (easy to hover) with the bar inside it.
-function createMonthColumn(month, biggestTotal, currency) {
+// Builds one week or month of the chart: a full-height column (easy to hover) with the bar inside it.
+function createChartColumn(bar, biggestTotal, currency) {
   const column = document.createElement("div");
-  column.className = "month-column";
-  // Lets keyboard users Tab through the months; the label is what screen readers announce.
+  column.className = "chart-column";
+  // Lets keyboard users Tab through the bars; the label is what screen readers announce.
   column.tabIndex = 0;
-  column.setAttribute("aria-label", describeMonth(month, currency));
+  column.setAttribute("aria-label", describeBar(bar, currency));
 
-  // Months with no spending get no bar at all, just the empty column.
-  if (month.total > 0) {
-    const bar = document.createElement("div");
-    bar.className = "month-bar";
-    if (isCurrentMonth(month.month)) {
-      bar.classList.add("current");
+  // Periods with no spending get no bar at all, just the empty column.
+  if (bar.total > 0) {
+    const fill = document.createElement("div");
+    fill.className = "chart-bar";
+    if (bar.isCurrent) {
+      fill.classList.add("current");
     }
-    // The biggest month fills the full height; the others are sized relative to it.
-    bar.style.height = `${(month.total / biggestTotal) * 100}%`;
-    column.appendChild(bar);
+    // The biggest bar fills the full height; the others are sized relative to it.
+    fill.style.height = `${(bar.total / biggestTotal) * 100}%`;
+    column.appendChild(fill);
   }
 
-  column.addEventListener("mouseenter", () => showMonthlyTooltip(column, month, currency));
-  column.addEventListener("focus", () => showMonthlyTooltip(column, month, currency));
-  column.addEventListener("mouseleave", hideMonthlyTooltip);
-  column.addEventListener("blur", hideMonthlyTooltip);
+  column.addEventListener("mouseenter", () => showChartTooltip(column, bar, currency));
+  column.addEventListener("focus", () => showChartTooltip(column, bar, currency));
+  column.addEventListener("mouseleave", hideChartTooltip);
+  column.addEventListener("blur", hideChartTooltip);
 
   return column;
 }
 
-// Builds the "Oct" label under one month.
-function createMonthLabel(month) {
+// Builds the label under one bar. Week labels ("22 Sep") are wider than month labels ("Sep"),
+// so for weeks only every second one gets text (always including this week); the rest are empty
+// spacers that keep the labels lined up with the bars.
+function createChartLabel(bar, index, barCount) {
   const label = document.createElement("span");
-  label.className = "month-label";
-  label.textContent = formatShortMonth(month.month);
+  label.className = "chart-label";
+
+  const stepsFromEnd = barCount - 1 - index;
+  const showText = chartPeriodType === "month" || stepsFromEnd % 2 === 0;
+
+  if (showText) {
+    label.textContent = bar.label;
+  }
+
   return label;
 }
 
-// Writes "Average €980.00 / month · Highest €1410.20 in Jul" next to the chart title.
-// The average only counts finished months that have spending, so the half-done current month
-// and the months before you started using the tracker don't pull it down.
-function renderMonthlySummary(months, currency) {
+// Writes "Average €980.00 / month · Highest €1410.20 in Jul" (or the weekly version) next to the title.
+// The average only counts finished periods that have spending, so the unfinished current one
+// and the time before you started using the tracker don't pull it down.
+function renderChartSummary(bars, currency) {
   let finishedTotal = 0;
   let finishedCount = 0;
-  let biggestMonth = months[0];
+  let biggestBar = bars[0];
 
-  for (const month of months) {
-    if (month.total > biggestMonth.total) {
-      biggestMonth = month;
+  for (const bar of bars) {
+    if (bar.total > biggestBar.total) {
+      biggestBar = bar;
     }
 
-    if (month.total > 0 && !isCurrentMonth(month.month)) {
-      finishedTotal += month.total;
+    if (bar.total > 0 && !bar.isCurrent) {
+      finishedTotal += bar.total;
       finishedCount += 1;
     }
   }
 
-  const summary = document.getElementById("monthly-summary");
+  const summary = document.getElementById("chart-summary");
 
-  if (biggestMonth.total === 0) {
+  if (biggestBar.total === 0) {
     summary.textContent = "";
     return;
   }
 
-  const highestText = `Highest ${formatMoney(biggestMonth.total, currency)} in ${formatShortMonth(biggestMonth.month)}`;
+  const when = chartPeriodType === "week" ? `week of ${biggestBar.label}` : biggestBar.label;
+  const highestText = `Highest ${formatMoney(biggestBar.total, currency)} in ${when}`;
 
-  // With no finished month yet there is nothing to average, so only the highest month is shown.
+  // With no finished period yet there is nothing to average, so only the highest one is shown.
   if (finishedCount === 0) {
     summary.textContent = highestText;
     return;
   }
 
-  const averageText = `Average ${formatMoney(finishedTotal / finishedCount, currency)} / month`;
+  const averageText = `Average ${formatMoney(finishedTotal / finishedCount, currency)} / ${chartPeriodType}`;
   summary.textContent = `${averageText} · ${highestText}`;
 }
 
-function renderMonthlyChart() {
-  const currency = getSelectedCurrency();
-  const months = sumByMonth(loadExpenses(), currency, CHART_MONTH_COUNT);
+// Highlights the chosen button in the chart's Week / Month switch and updates the title.
+function renderChartControls() {
+  for (const button of document.querySelectorAll(".chart-period-btn")) {
+    const isSelected = button.dataset.period === chartPeriodType;
+    button.classList.toggle("selected", isSelected);
+    button.setAttribute("aria-pressed", isSelected);
+  }
 
-  const chart = document.getElementById("monthly-chart");
-  const labels = document.getElementById("monthly-labels");
+  const title = document.getElementById("chart-title");
+  if (chartPeriodType === "week") {
+    title.textContent = `Weekly spending · last ${CHART_BAR_COUNT} weeks`;
+  } else {
+    title.textContent = `Monthly spending · last ${CHART_BAR_COUNT} months`;
+  }
+}
+
+function setChartPeriodType(type) {
+  chartPeriodType = type;
+  renderSpendingChart();
+}
+
+function renderSpendingChart() {
+  renderChartControls();
+
+  const currency = getSelectedCurrency();
+  const expenses = loadExpenses();
+  let bars;
+
+  if (chartPeriodType === "week") {
+    bars = sumByWeek(expenses, currency, CHART_BAR_COUNT);
+  } else {
+    bars = sumByMonth(expenses, currency, CHART_BAR_COUNT);
+  }
+
+  const chart = document.getElementById("spending-chart");
+  const labels = document.getElementById("chart-labels");
   chart.innerHTML = "";
   labels.innerHTML = "";
-  hideMonthlyTooltip();
-  renderMonthlySummary(months, currency);
+  hideChartTooltip();
+  renderChartSummary(bars, currency);
 
   let biggestTotal = 0;
-  for (const month of months) {
-    if (month.total > biggestTotal) {
-      biggestTotal = month.total;
+  for (const bar of bars) {
+    if (bar.total > biggestTotal) {
+      biggestTotal = bar.total;
     }
   }
 
   if (biggestTotal === 0) {
     const message = document.createElement("p");
     message.className = "no-data";
-    message.textContent = "No spending in the last 12 months.";
+    message.textContent = `No spending in the last ${CHART_BAR_COUNT} ${chartPeriodType}s.`;
     chart.appendChild(message);
     return;
   }
 
-  for (const month of months) {
-    chart.appendChild(createMonthColumn(month, biggestTotal, currency));
-    labels.appendChild(createMonthLabel(month));
+  for (let index = 0; index < bars.length; index++) {
+    chart.appendChild(createChartColumn(bars[index], biggestTotal, currency));
+    labels.appendChild(createChartLabel(bars[index], index, bars.length));
   }
 }
 
@@ -727,7 +810,7 @@ function getBreakdownLabel() {
   if (breakdownOffset === -1) {
     return "Last month";
   }
-  // "2026-08-01" -> "2026-08" -> "Aug 2026" (formatMonthWithYear lives in the monthly chart section).
+  // "2026-08-01" -> "2026-08" -> "Aug 2026" (formatMonthWithYear lives in the spending chart section).
   return formatMonthWithYear(getBreakdownRange().startText.slice(0, 7));
 }
 
@@ -763,7 +846,7 @@ function stepBreakdownPeriod(direction) {
 
 // Highlights the chosen period type, writes the label, and switches the arrows on or off.
 function renderBreakdownControls() {
-  for (const button of document.querySelectorAll(".period-btn")) {
+  for (const button of document.querySelectorAll(".breakdown-period-btn")) {
     const isSelected = button.dataset.period === breakdownPeriodType;
     button.classList.toggle("selected", isSelected);
     button.setAttribute("aria-pressed", isSelected);
@@ -887,7 +970,7 @@ function renderPage() {
   renderExpenses();
   renderTotals();
   renderAverages();
-  renderMonthlyChart();
+  renderSpendingChart();
   renderCategoryBreakdown();
 }
 
@@ -1590,11 +1673,16 @@ async function handleFileChosen(event) {
 }
 
 // The period also limits the filtered expense list, so these handlers redraw the whole page.
-for (const button of document.querySelectorAll(".period-btn")) {
+for (const button of document.querySelectorAll(".breakdown-period-btn")) {
   button.addEventListener("click", () => setBreakdownPeriodType(button.dataset.period));
 }
 document.getElementById("period-prev").addEventListener("click", () => stepBreakdownPeriod(-1));
 document.getElementById("period-next").addEventListener("click", () => stepBreakdownPeriod(1));
+
+// The chart's own Week / Month switch. Only the chart depends on it, so only the chart is redrawn.
+for (const button of document.querySelectorAll(".chart-period-btn")) {
+  button.addEventListener("click", () => setChartPeriodType(button.dataset.period));
+}
 document.getElementById("category-filter-clear").addEventListener("click", clearCategoryFilter);
 
 for (const button of document.querySelectorAll(".currency-btn")) {

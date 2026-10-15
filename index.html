@@ -45,16 +45,23 @@
       </div>
     </section>
 
-    <section class="card monthly-card">
+    <section class="card chart-card">
       <div class="card-header">
-        <h2>Monthly spending · last 12 months</h2>
-        <span id="monthly-summary" class="monthly-summary"></span>
+        <div class="chart-heading">
+          <!-- The title and summary are written by script.js, since they change with Week / Month. -->
+          <h2 id="chart-title">Monthly spending · last 12 months</h2>
+          <span id="chart-summary" class="chart-summary"></span>
+        </div>
+        <div class="period-switch" role="group" aria-label="Chart period">
+          <button type="button" class="period-btn chart-period-btn" data-period="week">Week</button>
+          <button type="button" class="period-btn chart-period-btn" data-period="month">Month</button>
+        </div>
       </div>
-      <!-- Bars, month labels and the hover box are all filled in by renderMonthlyChart() in script.js. -->
-      <div class="monthly-chart-area">
-        <div id="monthly-chart" class="monthly-chart"></div>
-        <div id="monthly-labels" class="monthly-labels"></div>
-        <div id="monthly-tooltip" class="monthly-tooltip" hidden></div>
+      <!-- Bars, labels and the hover box are all filled in by renderSpendingChart() in script.js. -->
+      <div class="chart-area">
+        <div id="spending-chart" class="spending-chart"></div>
+        <div id="chart-labels" class="chart-labels"></div>
+        <div id="chart-tooltip" class="chart-tooltip" hidden></div>
       </div>
     </section>
 
@@ -63,9 +70,9 @@
         <h2>Spending by category</h2>
         <div class="card-controls">
           <div class="period-switch" role="group" aria-label="Period type">
-            <button type="button" class="period-btn" data-period="week">Week</button>
-            <button type="button" class="period-btn" data-period="month">Month</button>
-            <button type="button" class="period-btn" data-period="all">All time</button>
+            <button type="button" class="period-btn breakdown-period-btn" data-period="week">Week</button>
+            <button type="button" class="period-btn breakdown-period-btn" data-period="month">Month</button>
+            <button type="button" class="period-btn breakdown-period-btn" data-period="all">All time</button>
           </div>
           <!-- Steps back and forward one week or month. Hidden for "All time". -->
           <div class="period-nav" id="period-nav">
