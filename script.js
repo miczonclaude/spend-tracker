@@ -352,8 +352,6 @@ function renderTotals() {
   const expenses = loadExpenses();
   const today = new Date();
 
-  const todayText = formatDateAsText(today);
-
   const weekStart = getStartOfWeek(today);
   const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
 
@@ -361,7 +359,6 @@ function renderTotals() {
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-  renderTotalBox("total-today", expenses, todayText, todayText);
   renderTotalBox("total-week", expenses, formatDateAsText(weekStart), formatDateAsText(weekEnd));
   renderTotalBox("total-month", expenses, formatDateAsText(monthStart), formatDateAsText(monthEnd));
 }
