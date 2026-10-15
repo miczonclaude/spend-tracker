@@ -62,6 +62,7 @@ h2 {
     "averages averages"
     "breakdown breakdown"
     "import   import"
+    "backup   backup"
     "list     list";
   gap: 1.25rem;
   max-width: 1100px;
@@ -125,6 +126,10 @@ h2 {
   grid-area: import;
 }
 
+.backup-card {
+  grid-area: backup;
+}
+
 .list-card {
   grid-area: list;
 }
@@ -139,6 +144,7 @@ h2 {
       "averages"
       "breakdown"
       "import"
+      "backup"
       "list";
   }
 }
@@ -341,6 +347,23 @@ input[type="file"]::file-selector-button {
 
 .import-actions button {
   padding: 0.7rem 1.2rem;
+}
+
+/* ---------- Backup ---------- */
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.backup-actions button {
+  padding: 0.7rem 1.2rem;
+}
+
+#backup-message {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
 }
 
 input, select {

@@ -78,6 +78,18 @@
       </div>
     </section>
 
+    <section class="card backup-card">
+      <h2>Backup</h2>
+      <p class="hint">Your expenses live only in this browser. Download a backup now and then, and keep it outside this project folder.</p>
+      <div class="backup-actions">
+        <button type="button" id="backup-download">Download backup</button>
+        <button type="button" id="backup-restore" class="secondary-btn">Restore from backup</button>
+      </div>
+      <!-- Hidden: the Restore button opens it, so the page shows a normal button instead of a file field. -->
+      <input type="file" id="backup-file" accept=".json" hidden>
+      <p id="backup-message"></p>
+    </section>
+
     <section class="card list-card">
       <h2>Recent expenses</h2>
       <ul id="expense-list"></ul>

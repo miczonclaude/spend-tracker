@@ -3,3 +3,5 @@
 *.xlsx
 *.xls
 *.pdf
+# Backups from the tracker contain real transactions too.
+spending-backup-*.json

@@ -38,6 +38,15 @@ const CATEGORIES = [
 // Keywords are written in lowercase, without Polish accents ("zabka", not "Żabka").
 // To teach the tracker a new store, add a keyword to the right list.
 const CATEGORY_RULES = [
+  // Your own specific stores come first, so a broad keyword further down (like "cafe") can't steal them.
+  {
+    category: "Joints",
+    keywords: ["program one", "papilon", "papillon"],
+  },
+  {
+    category: "Going out",
+    keywords: ["samuels"],
+  },
   {
     category: "Subscriptions",
     keywords: [
@@ -51,7 +60,7 @@ const CATEGORY_RULES = [
     keywords: [
       "uber eats", "ubereats", "bolt food", "glovo", "wolt", "pyszne", "mcdonald", "kfc",
       "burger", "subway", "starbucks", "costa coffee", "pizza", "kebab", "sushi", "ramen",
-      "restaura", "bistro", "cafe", "kawiarnia", "pasibus", "north fish",
+      "restaura", "bistro", "cafe", "kawiarnia", "pasibus", "north fish", "lesmash", "le smash",
     ],
   },
   {
@@ -82,6 +91,7 @@ const CATEGORY_RULES = [
     keywords: [
       "decathlon", "gym", "fitness", "silownia", "multisport", "zdrofit", "calypso", "mcfit",
       "basen", "intersport", "martes", "go sport", "climbing", "wspinacz", "sport", "playtomic",
+      "fc urban", "train more", "trainmore",
     ],
   },
   {
@@ -599,6 +609,33 @@ function rememberChosenCategories(expenses) {
   saveCategoryMemory(memory);
 }
 
+// Gives saved "Other" expenses another chance: new keyword rules only work at import time,
+// so expenses imported before a rule existed would otherwise stay in "Other" forever.
+// Categories you picked by hand are left alone.
+function recategorizeOtherExpenses() {
+  const expenses = loadExpenses();
+  let changedCount = 0;
+
+  for (const expense of expenses) {
+    // Older hand-typed expenses may have no store name, so there is nothing to match.
+    if (expense.category !== DEFAULT_CATEGORY || !expense.note) {
+      continue;
+    }
+
+    const newCategory = detectCategory(expense.note);
+
+    if (newCategory !== DEFAULT_CATEGORY) {
+      expense.category = newCategory;
+      changedCount = changedCount + 1;
+    }
+  }
+
+  // Only write to localStorage when something actually changed.
+  if (changedCount > 0) {
+    saveExpenses(expenses);
+  }
+}
+
 // ---------- Revolut import ----------
 
 // The columns of a Revolut CSV statement that the import relies on.
@@ -1026,6 +1063,115 @@ function confirmImport() {
 }
 
 // Runs when the user picks a file. A PDF is a VeloBank statement, anything else a Revolut CSV.
+// ---------- Backup and restore ----------
+
+// Marks a file as a backup from this tracker, so restore can refuse other JSON files.
+const BACKUP_APP_NAME = "spending-tracker";
+
+function showBackupMessage(text) {
+  document.getElementById("backup-message").textContent = text;
+}
+
+// Gathers everything the tracker keeps in localStorage into one object.
+function createBackup() {
+  return {
+    app: BACKUP_APP_NAME,
+    createdAt: new Date().toISOString(),
+    expenses: loadExpenses(),
+    categoryMemory: loadCategoryMemory(),
+    selectedCurrency: getSelectedCurrency(),
+  };
+}
+
+// Saves the backup as a .json file in the browser's downloads.
+function downloadBackup() {
+  const backup = createBackup();
+  // null, 2 adds line breaks and indentation, so the file is readable if you open it.
+  const text = JSON.stringify(backup, null, 2);
+  const file = new Blob([text], { type: "application/json" });
+
+  // Browsers download a file when you click a link that has a "download" name.
+  // So we make an invisible link to the file, click it, then clean up.
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(file);
+  link.download = `spending-backup-${formatDateAsText(new Date())}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+
+  showBackupMessage(`Backup downloaded with ${backup.expenses.length} expenses.`);
+}
+
+// Checks that a file's contents look like a backup made by downloadBackup().
+function isValidBackup(data) {
+  if (!data || data.app !== BACKUP_APP_NAME) {
+    return false;
+  }
+
+  if (!Array.isArray(data.expenses)) {
+    return false;
+  }
+
+  // Every expense needs at least an id, an amount and a date to show up correctly.
+  for (const expense of data.expenses) {
+    if (typeof expense.id !== "number" || typeof expense.amount !== "number" || !expense.date) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Replaces the current data with the data from a backup file (after asking first).
+async function restoreBackup(file) {
+  const text = await file.text();
+  let data;
+
+  // JSON.parse throws an error if the file isn't valid JSON, so we catch it instead of crashing.
+  try {
+    data = JSON.parse(text);
+  } catch (error) {
+    showBackupMessage("That file isn't a backup from this tracker.");
+    return;
+  }
+
+  if (!isValidBackup(data)) {
+    showBackupMessage("That file isn't a backup from this tracker.");
+    return;
+  }
+
+  const currentCount = loadExpenses().length;
+  const confirmed = confirm(
+    `This will replace your current ${currentCount} expenses with ${data.expenses.length} from the backup. Continue?`
+  );
+
+  if (!confirmed) {
+    showBackupMessage("Restore cancelled. Nothing was changed.");
+    return;
+  }
+
+  saveExpenses(data.expenses);
+  saveCategoryMemory(data.categoryMemory || {});
+
+  if (CURRENCIES.includes(data.selectedCurrency)) {
+    localStorage.setItem(CURRENCY_CHOICE_KEY, data.selectedCurrency);
+  }
+
+  renderPage();
+  showBackupMessage(`Restored ${data.expenses.length} expenses from the backup.`);
+}
+
+async function handleBackupFileChosen(event) {
+  const file = event.target.files[0];
+
+  if (!file) {
+    return;
+  }
+
+  await restoreBackup(file);
+  // Emptying the file field lets the same backup be picked again later.
+  event.target.value = "";
+}
+
 // Reading a file takes a moment, so "await" pauses this function until it's ready.
 async function handleFileChosen(event) {
   const file = event.target.files[0];
@@ -1055,4 +1201,13 @@ document.getElementById("import-cancel").addEventListener("click", () => {
   showImportMessage("");
 });
 
+document.getElementById("backup-download").addEventListener("click", downloadBackup);
+// The Restore button just opens the hidden file picker; picking a file starts the restore.
+document.getElementById("backup-restore").addEventListener("click", () => {
+  document.getElementById("backup-file").click();
+});
+document.getElementById("backup-file").addEventListener("change", handleBackupFileChosen);
+
+// Re-check "Other" expenses first, so the totals and breakdown are drawn with the fixed categories.
+recategorizeOtherExpenses();
 renderPage();
