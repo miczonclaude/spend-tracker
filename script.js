@@ -141,13 +141,35 @@ function getCurrency(expense) {
   return expense.currency || "EUR";
 }
 
-// Turns an amount into text like "€32.10" or "45.00 zł".
-function formatMoney(amount, currency) {
-  if (currency === "PLN") {
-    return `${amount.toFixed(2)} zł`;
+// The space put between groups of thousands. It is a "non-breaking" space,
+// so a long amount like "1 240.50" never gets split across two lines.
+const THOUSANDS_SEPARATOR = " ";
+
+// Turns 1240.5 into "1 240.50": two decimals after a dot, and a space every three digits.
+function formatAmount(amount) {
+  // The minus sign (for refunds) is kept aside, so it isn't counted as a digit below.
+  const sign = amount < 0 ? "-" : "";
+  const parts = Math.abs(amount).toFixed(2).split(".");   // 1240.5 -> ["1240", "50"]
+
+  let wholePart = parts[0];
+  let groupedPart = "";
+
+  // Takes three digits at a time from the right: "1240" -> " 240", leaving "1".
+  while (wholePart.length > 3) {
+    groupedPart = THOUSANDS_SEPARATOR + wholePart.slice(-3) + groupedPart;
+    wholePart = wholePart.slice(0, -3);
   }
 
-  return `€${amount.toFixed(2)}`;
+  return `${sign}${wholePart}${groupedPart}.${parts[1]}`;
+}
+
+// Turns an amount into text like "€1 240.50" or "45.00 zł".
+function formatMoney(amount, currency) {
+  if (currency === "PLN") {
+    return `${formatAmount(amount)} zł`;
+  }
+
+  return `€${formatAmount(amount)}`;
 }
 
 // ---------- Currency switch ----------
