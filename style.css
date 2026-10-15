@@ -452,6 +452,28 @@ button:focus-visible {
   color: var(--color-muted);
 }
 
+/* The category dropdown in each expense row: small and quiet, so the row stays the same height. */
+.saved-category-select {
+  padding: 0.1rem 0.3rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  background-color: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.saved-category-select:hover,
+.saved-category-select:focus-visible {
+  color: var(--color-text);
+  border-color: var(--color-text);
+}
+
+/* The open list of options needs a solid background, or it is unreadable on dark mode. */
+.saved-category-select option {
+  background-color: var(--color-card);
+  color: var(--color-text);
+}
+
 /* Quiet by default so it doesn't shout on every row; turns red on hover. */
 .delete-btn {
   padding: 0.35rem 0.7rem;

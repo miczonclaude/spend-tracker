@@ -218,9 +218,11 @@ function renderExpenses() {
     title.className = "expense-title";
     title.textContent = expense.note || expense.category;
 
+    // The grey line under the title: a category dropdown, then the date and card as plain text.
     const meta = document.createElement("span");
     meta.className = "expense-meta";
-    meta.textContent = `${expense.category} · ${expense.date} · ${expense.card}`;
+    meta.appendChild(createSavedCategorySelect(expense));
+    meta.append(` · ${expense.date} · ${expense.card}`);
 
     info.appendChild(title);
     info.appendChild(meta);
@@ -535,6 +537,53 @@ function renderPage() {
   renderTotals();
   renderAverages();
   renderCategoryBreakdown();
+}
+
+// Builds the small dropdown that shows (and lets you change) a saved expense's category.
+function createSavedCategorySelect(expense) {
+  const select = document.createElement("select");
+  select.className = "saved-category-select";
+  select.setAttribute("aria-label", "Category");
+
+  for (const category of CATEGORIES) {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    select.appendChild(option);
+  }
+
+  select.value = expense.category;
+  select.addEventListener("change", () => changeSavedCategory(expense, select.value));
+
+  return select;
+}
+
+// Changes the category of a saved expense, and of every other saved expense from the same store.
+// The choice is remembered, so future imports from that store get it automatically.
+function changeSavedCategory(changedExpense, category) {
+  const expenses = loadExpenses();
+  const changed = [];
+
+  for (const expense of expenses) {
+    // Expenses without a store name can't be matched to others, so only the clicked one changes.
+    const isSameExpense = expense.id === changedExpense.id;
+    const isSameStore =
+      changedExpense.note && expense.note && simplifyText(expense.note) === simplifyText(changedExpense.note);
+
+    if (isSameExpense || isSameStore) {
+      expense.category = category;
+      changed.push(expense);
+    }
+  }
+
+  saveExpenses(expenses);
+
+  // Only expenses with a store name can be remembered (the memory is keyed by store name).
+  if (changedExpense.note) {
+    rememberChosenCategories([changed[0]]);
+  }
+
+  renderPage();
 }
 
 function deleteExpense(id) {
