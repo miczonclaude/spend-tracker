@@ -231,10 +231,24 @@ h2 {
   border-radius: 4px 4px 0 0;
 }
 
+.chart-column {
+  /* Bars are clickable: they open that week or month in "Spending by category". */
+  cursor: pointer;
+}
+
 .chart-column:hover,
 .chart-column:focus-visible {
   background-color: var(--color-input);
   outline: none;
+}
+
+/* The week or month that "Spending by category" is showing: a faint background and a pink outline.
+   An outline is drawn on top of the bar, so it stays visible however tall the bar is.
+   This rule comes after :hover, so the outline stays even while the mouse is over it. */
+.chart-column.selected {
+  background-color: var(--color-input);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 
 /* The bar itself: same pink as the category bars, rounded only at the top. Height is set in script.js. */

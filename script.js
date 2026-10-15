@@ -512,6 +512,8 @@ function formatMonthWithYear(monthText) {
 //   longLabel  - text for the hover box, like "Oct 2026" or "22 Sep – 28 Sep"
 //   total      - money spent
 //   isCurrent  - true for the week or month that isn't finished yet
+//   offset     - steps back from now: 0 for the current week or month, -1 for the one before, and so on
+//                (the same numbering as breakdownOffset in "Spending by category")
 
 // Adds up spending per month for the last few months, in one currency. Oldest month first.
 // Months without spending are included with a total of 0, so they show as gaps in the chart.
@@ -539,6 +541,7 @@ function sumByMonth(expenses, currency, monthCount) {
       longLabel: formatMonthWithYear(monthText),
       total: totals[monthText] || 0,
       isCurrent: monthsAgo === 0,
+      offset: -monthsAgo,
     });
   }
 
@@ -572,6 +575,7 @@ function sumByWeek(expenses, currency, weekCount) {
       longLabel: `${formatDayMonth(mondayText)} – ${formatDayMonth(formatDateAsText(sunday))}`,
       total: totals[mondayText] || 0,
       isCurrent: weeksAgo === 0,
+      offset: -weeksAgo,
     });
   }
 
@@ -630,7 +634,33 @@ function createChartColumn(bar, biggestTotal, currency) {
   column.addEventListener("mouseleave", hideChartTooltip);
   column.addEventListener("blur", hideChartTooltip);
 
+  // Clicking a bar (or pressing Enter / Space on it) shows that period in "Spending by category".
+  column.setAttribute("role", "button");
+  column.addEventListener("click", () => jumpToChartPeriod(bar));
+  column.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      // Stops Space from also scrolling the page.
+      event.preventDefault();
+      jumpToChartPeriod(bar);
+    }
+  });
+
+  // Highlights the bar whose week or month "Spending by category" is showing right now.
+  const isShownBelow = breakdownPeriodType === chartPeriodType && breakdownOffset === bar.offset;
+  column.setAttribute("aria-pressed", String(isShownBelow));
+  if (isShownBelow) {
+    column.classList.add("selected");
+  }
+
   return column;
+}
+
+// Makes "Spending by category" show the clicked bar's week or month, then scrolls down to it.
+function jumpToChartPeriod(bar) {
+  breakdownPeriodType = chartPeriodType;
+  breakdownOffset = bar.offset;
+  renderPage();
+  document.querySelector(".breakdown-card").scrollIntoView({ behavior: "smooth" });
 }
 
 // Builds the label under one bar. Week labels ("22 Sep") are wider than month labels ("Sep"),
