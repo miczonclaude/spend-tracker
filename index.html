@@ -92,6 +92,11 @@
 
     <section class="card list-card">
       <h2>Recent expenses</h2>
+      <!-- Shown only after clicking a category in "Spending by category". -->
+      <div id="category-filter" class="filter-bar" hidden>
+        <span id="category-filter-text"></span>
+        <button type="button" id="category-filter-clear" class="secondary-btn">Show all</button>
+      </div>
       <ul id="expense-list"></ul>
     </section>
   </main>

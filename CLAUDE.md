@@ -22,7 +22,7 @@ A personal spending tracker. Plain HTML, CSS, and JavaScript — no frameworks, 
 9. ~~PDF import from VeloBank~~ — done (card history PDF read with pdf.js; Revolut top-ups skipped)
 10. ~~Backup and restore (download all data as a .json file, restore replaces current data)~~ — done
 11. ~~Change the category of a saved expense~~ — done (dropdown in each row; changes all expenses from that store and remembers it)
-12. Click a category in the breakdown to see its expenses
+12. ~~Click a category in the breakdown to see its expenses~~ — done (filters the expense list to that category and period)
 
 ## Current files
 

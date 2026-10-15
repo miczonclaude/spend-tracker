@@ -191,19 +191,84 @@ function compareNewestFirst(a, b) {
   return b.id - a.id;
 }
 
+// The category clicked in "Spending by category", or null when the list shows everything.
+let selectedCategory = null;
+
+// Keeps only the expenses of the selected category, within the period picked for the breakdown.
+function filterBySelectedCategory(expenses) {
+  if (selectedCategory === null) {
+    return expenses;
+  }
+
+  const period = document.getElementById("breakdown-period").value;
+  const range = getBreakdownRange(period, new Date());
+
+  return expenses.filter((expense) => {
+    const isInRange = expense.date >= range.startText && expense.date <= range.endText;
+    return isInRange && expense.category === selectedCategory;
+  });
+}
+
+// Shows "Showing: Other · This month" above the list while a category is selected.
+function renderCategoryFilterBar() {
+  const bar = document.getElementById("category-filter");
+
+  if (selectedCategory === null) {
+    bar.hidden = true;
+    return;
+  }
+
+  // The visible text of the chosen period option, like "This month".
+  const periodSelect = document.getElementById("breakdown-period");
+  const periodName = periodSelect.options[periodSelect.selectedIndex].text;
+
+  document.getElementById("category-filter-text").textContent =
+    `Showing: ${selectedCategory} · ${periodName}`;
+  bar.hidden = false;
+}
+
+// Shows only one category in the expense list. Clicking the same category again shows everything.
+function selectCategory(category) {
+  if (selectedCategory === category) {
+    selectedCategory = null;
+  } else {
+    selectedCategory = category;
+  }
+
+  renderPage();
+
+  if (selectedCategory !== null) {
+    document.querySelector(".list-card").scrollIntoView({ behavior: "smooth" });
+  }
+}
+
+function clearCategoryFilter() {
+  selectedCategory = null;
+  renderPage();
+}
+
 function renderExpenses() {
   const expenses = loadExpenses();
   const list = document.getElementById("expense-list");
   list.innerHTML = "";
 
-  // Only the expenses in the currency the page is showing.
-  const visible = filterByCurrency(expenses, getSelectedCurrency());
+  renderCategoryFilterBar();
+
+  // Only the expenses in the currency the page is showing (and the clicked category, if any).
+  const inCurrency = filterByCurrency(expenses, getSelectedCurrency());
+  const visible = filterBySelectedCategory(inCurrency);
   const sorted = [...visible].sort(compareNewestFirst);
 
   if (sorted.length === 0) {
     const message = document.createElement("li");
     message.className = "no-data";
-    message.textContent = "No expenses in this currency yet.";
+
+    if (selectedCategory === null) {
+      message.textContent = "No expenses in this currency yet.";
+    } else {
+      message.textContent = `Nothing left in ${selectedCategory} for this period.`;
+    }
+
     list.appendChild(message);
   }
 
@@ -472,6 +537,25 @@ function sumByCategory(expenses, startText, endText, currency) {
 function createBreakdownRow(entry, biggestTotal, grandTotal, currency) {
   const row = document.createElement("li");
   row.className = "breakdown-row";
+
+  // The row works like a button: click it (or press Enter / Space on it) to see that category's expenses.
+  // tabindex="0" lets the keyboard Tab key reach it; role and aria-pressed tell screen readers what it is.
+  const isSelected = entry.category === selectedCategory;
+  row.tabIndex = 0;
+  row.setAttribute("role", "button");
+  row.setAttribute("aria-pressed", String(isSelected));
+  if (isSelected) {
+    row.classList.add("selected");
+  }
+
+  row.addEventListener("click", () => selectCategory(entry.category));
+  row.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      // Stops Space from also scrolling the page.
+      event.preventDefault();
+      selectCategory(entry.category);
+    }
+  });
 
   const name = document.createElement("span");
   name.textContent = entry.category;
@@ -1237,7 +1321,9 @@ async function handleFileChosen(event) {
   }
 }
 
-document.getElementById("breakdown-period").addEventListener("change", renderCategoryBreakdown);
+// The period also limits the filtered expense list, so the whole page is redrawn.
+document.getElementById("breakdown-period").addEventListener("change", renderPage);
+document.getElementById("category-filter-clear").addEventListener("click", clearCategoryFilter);
 
 for (const button of document.querySelectorAll(".currency-btn")) {
   button.addEventListener("click", () => setSelectedCurrency(button.dataset.currency));
